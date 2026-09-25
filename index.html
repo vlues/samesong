@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Same Second</title>
+<meta name="description" content="Meet the strangers listening to the same song, at the same second, right now.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="sky"></canvas>
+
+<main id="pick" class="screen">
+  <h1>Same<br><em>Second</em></h1>
+  <p class="lede">Somewhere, someone is hearing the exact moment of the exact song you are. For the next three minutes, you can find them. When the song ends, the room disappears.</p>
+
+  <button id="spotifyBtn" class="big spotify">Connect Spotify (auto-sync)</button>
+  <div class="or">or tell us what's playing — works for Apple Music, SoundCloud, anything</div>
+  <input id="q" placeholder="Search a song…" autocomplete="off">
+  <ul id="results"></ul>
+</main>
+
+<main id="sync" class="screen hidden">
+  <img id="syncArt" alt="">
+  <h2 id="syncTitle"></h2>
+  <p>Where are you in the song right now?</p>
+  <div class="scrub"><span id="scrubVal">0:00</span><input id="scrub" type="range" min="0" value="0"></div>
+  <button id="startBtn" class="big">I'm right here — join the room</button>
+  <button id="fromTop" class="ghost">Or: I'll hit this the second the song starts</button>
+  <button class="ghost back">← different song</button>
+</main>
+
+<main id="room" class="screen hidden">
+  <header>
+    <img id="art" alt="">
+    <div><div id="title"></div><div id="artist"></div></div>
+    <button id="leave" class="ghost">leave</button>
+  </header>
+  <div id="stage">
+    <svg id="ring" viewBox="0 0 300 300"></svg>
+    <div id="center">
+      <div id="count">just you</div>
+      <div id="clock">0:00</div>
+      <div id="hint">tap anywhere to the beat</div>
+    </div>
+  </div>
+  <div id="floaters"></div>
+  <form id="say"><input id="msg" maxlength="60" placeholder="whisper to the room (vanishes with the song)"><button>send</button></form>
+  <div id="toast"></div>
+</main>
+
+<main id="end" class="screen hidden">
+  <h2>The song ended.<br>So did the room.</h2>
+  <div id="card"></div>
+  <button id="again" class="big">Find the next one</button>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
