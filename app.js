@@ -1,11 +1,11 @@
-import { joinRoom, selfId } from 'https://esm.run/trystero@0.25/nostr';
+import { joinRoom, selfId } from './relay.js';
 
 // Put your Spotify app's Client ID here (developer.spotify.com → Create app,
 // redirect URI = this page's URL). Leave blank and the Spotify button explains.
 const SPOTIFY_CLIENT_ID = '';
 const APP_ID = 'same-second-v1';
 const SYNC_WINDOW = 6000;   // ms apart and you're still "at the same second"
-const HARMONY_WINDOW = 180; // ms between taps from different people = harmony
+const HARMONY_WINDOW = 200; // ms between taps from different people = harmony
 
 const $ = s => document.querySelector(s);
 const show = id => document.querySelectorAll('.screen').forEach(s => s.classList.toggle('hidden', s.id !== id));
@@ -65,20 +65,16 @@ async function enter() {
   lastTick = Date.now(); peers = {}; stats = { shared: 0, peak: 0, harmonies: 0, whispers: 0, met: new Set() };
   $('#art').src = track.art; $('#title').textContent = track.title; $('#artist').textContent = track.artist;
   show('room');
-  room = joinRoom({ appId: APP_ID }, await roomKey(track.title, track.artist));
-  const [sHello, gHello] = room.makeAction('hello');
-  const [sTap, gTap] = room.makeAction('tap');
-  const [sSay, gSay] = room.makeAction('say');
-  send = { hello: sHello, tap: sTap, say: sSay };
-  gHello((d, id) => {
+  room = joinRoom(APP_ID, await roomKey(track.title, track.artist));
+  send = { hello: d => room.send('hello', d), tap: d => room.send('tap', d), say: d => room.send('say', d) };
+  room.on('hello', (d, id) => {
     const isNew = !peers[id];
     peers[id] = { startedAt: d.startedAt, hue: d.hue, seen: Date.now() };
-    if (isNew && inSync(id)) toast('someone just arrived at the same second');
+    if (isNew) { hello(); if (inSync(id)) toast('someone just arrived at the same second'); }
   });
-  room.onPeerJoin(() => hello());
-  room.onPeerLeave(id => delete peers[id]);
-  gTap((d, id) => { if (inSync(id)) onTap(peers[id].hue, id); });
-  gSay((d, id) => { if (inSync(id) && typeof d.text === 'string') floatMsg(d.text.slice(0, 60), peers[id].hue); });
+  room.on('tap', (d, id) => { if (inSync(id)) onTap(peers[id].hue, id, +d.at || Date.now()); });
+  room.on('say', (d, id) => { if (inSync(id) && typeof d.text === 'string') floatMsg(d.text.slice(0, 60), peers[id].hue); });
+  hello();
 }
 const hello = () => send.hello?.({ startedAt, hue: myHue });
 const inSync = id => peers[id] && Math.abs(peers[id].startedAt - startedAt) < SYNC_WINDOW;
@@ -89,13 +85,13 @@ $('#leave').onclick = () => { leaveRoom(); show('pick'); };
 
 // taps: everyone in sync sees ripples; taps landing together = harmony
 let recentTaps = [];
-$('#stage').addEventListener('pointerdown', () => { send.tap?.({}); onTap(myHue, selfId); });
-document.addEventListener('keydown', e => { if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && room) { e.preventDefault(); send.tap?.({}); onTap(myHue, selfId); } });
-function onTap(h, id) {
-  const now = performance.now();
-  recentTaps = recentTaps.filter(t => now - t.at < HARMONY_WINDOW);
+const myTap = () => { const at = Date.now(); send.tap?.({ at }); onTap(myHue, selfId, at); };
+$('#stage').addEventListener('pointerdown', myTap);
+document.addEventListener('keydown', e => { if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && room) { e.preventDefault(); myTap(); } });
+function onTap(h, id, at) {
+  recentTaps = recentTaps.filter(t => Date.now() - t.at < 3000 && Math.abs(at - t.at) < HARMONY_WINDOW);
   const others = new Set(recentTaps.map(t => t.id)); others.delete(id);
-  recentTaps.push({ at: now, id });
+  recentTaps.push({ at, id });
   ripples.push({ h, r: 0, big: others.size > 0 });
   if (others.size > 0 && (id === selfId || others.has(selfId))) {
     stats.harmonies++; toast(`harmony — ${others.size + 1} of you hit the same beat`);
